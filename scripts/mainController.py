@@ -138,26 +138,38 @@ class StateMachine():
         original_rpy = self.armInterface.move_group.get_current_rpy()
         original_pose = self.armInterface.move_group.get_current_pose().pose
         self.armInterface.incHeight(0.12, original_rpy, original_pose)
+        
+        self.armInterface.gotoObject(0,0,0,0,0,0) #(x,y,z,aplha,belta,gamma) # This might have to hand over a quaternion instead of RP
 
-        #if (self.EEInterface.get_vacuum_status()):
-            #move arm to object
         self.EEInterface.toggle_vacuum(True)
-        self.armInterface.gotoObject(0,0,0,0,0,0) #(x,y,z,aplha,belta,gamma) # This might have to hand over a quaternion instead of RPY
-        self.armInterface.incHeight(0.12, original_rpy, original_pose)
-        rospy.sleep(4)
-        original_rpy = self.armInterface.move_group.get_current_rpy()
-        original_pose = self.armInterface.move_group.get_current_pose().pose
-        self.armInterface.incDepth(0.05064, original_rpy, original_pose)
-        rospy.sleep(4)
-            # then move into shelf
-            # Then move down onto object
-        # self.EEInterface.toggle_vacuum(False)
-            #check item grasped via if(self.EEInterface.get_item_held_status())
+        #if (self.EEInterface.get_vacuum_status()):
+            
+            #move arm to object
+        
+            #check item grasped via self.EEInterface.get_item_held_status()  
+            # if self.EEInterface.get_item_held_status() == False:
+            # rospy.loginfo("Wait I am not holding any item!")
+            
+            # move the arm a bit on the left/right
+            
+            # if self.EEInterface.get_item_held_status() == False:
+            # rospy.loginfo("Nop, definitely no item held!")
+            # failure = True
+            # self.num_failures += 1
+            
+            # move arm back to shelf position 
 
-            #move arm to bin home position
+            # else:    
+            self.armInterface.incHeight(0.12, original_rpy, original_pose)
+            rospy.sleep(4)
+            original_rpy = self.armInterface.move_group.get_current_rpy()
+            original_pose = self.armInterface.move_group.get_current_pose().pose
+            self.armInterface.incDepth(0.05064, original_rpy, original_pose)
+            rospy.sleep(4)
 
         # TODO
 
+        # change the logic to go back to vision sweep if failure is 1
         if failure:
             if self.num_failures is 1:
                 return 3
@@ -174,16 +186,22 @@ class StateMachine():
 
             @return the next state. This may be 1 on sucess, and also 1 on failure
         """
-
+        
         # TODO
         rospy.loginfo("State 4!")
-        #Check item still ItemHeld
+        # Check item still ItemHeld
         # Commented out for now
         # if self.EEInterface.get_item_held_status() == False:
         #     self.EEInterface.toggle_vacuum(False)
         #     # record item dropped
         #     return 1
 
+        # move arm to home 
+        # if self.EEInterface.get_item_held_status() == False:
+        #     self.EEInterface.toggle_vacuum(False)
+        #     # record item dropped
+        #     return 1
+        
         #move arm to box
         self.armInterface.gotoBox()
 
