@@ -112,13 +112,13 @@ class StateMachine():
         #move to bin home position
         if self.itemNumber == 1:
             self.armInterface.gotoBin("A")
-        elif self.itemNumber ==2:
+        elif self.itemNumber == 2:
             self.armInterface.gotoBin("B")
-        elif self.itemNumber ==3:
+        elif self.itemNumber == 3:
             self.armInterface.gotoBin("C")
-        elif self.itemNumber ==4:
+        elif self.itemNumber == 4:
             self.armInterface.gotoBin("D")
-        elif self.itemNumber ==5:
+        elif self.itemNumber == 5:
             self.armInterface.gotoBin("E")
         else:
             self.armInterface.gotoBin("F")
@@ -126,10 +126,6 @@ class StateMachine():
         #do sweep
         original_rpy = self.armInterface.move_group.get_current_rpy()
         original_pose = self.armInterface.move_group.get_current_pose().pose
-        #rospy.loginfo("rpy:")
-        #rospy.loginfo(original_rpy)
-        #'rospy.loginfo("pose")
-        #'ospy.loginfo(original_pose)
         # Leave these alone once taken
         # Now create a loop to send signal to arm for position in sweep
         # After each position send correspondign signal to Vision System
@@ -153,72 +149,90 @@ class StateMachine():
         failure = False
         # self.EEInterface.toggle_vacuum(True)
 
-        time.sleep(5)
+        rospy.sleep(1)
 
-        original_rpy = self.armInterface.move_group.get_current_rpy()
-        original_pose = self.armInterface.move_group.get_current_pose().pose
-        self.armInterface.incHeight(0.12, original_rpy, original_pose)
+        self.armInterface.incHeight(0.12, self.armInterface.move_group.get_current_rpy(), self.armInterface.move_group.get_current_pose().pose)
 
         self.EEInterface.toggle_vacuum(True)
-        rospy.sleep(4)
+        rospy.sleep(1)
 
-
-        #if (self.EEInterface.get_vacuum_status()):
-            #move arm to object
-
-
-        #self.armInterface.gotoObject(0,0,0,0,0,0) #(x,y,z,aplha,belta,gamma) # This might have to hand over a quaternion instead of RPY
-        original_rpy = self.armInterface.move_group.get_current_rpy()
-        original_pose = self.armInterface.move_group.get_current_pose().pose
-        self.armInterface.incDepth(-0.25,original_rpy, original_pose)
-        rospy.loginfo("going down")
-        original_rpy = self.armInterface.move_group.get_current_rpy()
-        original_pose = self.armInterface.move_group.get_current_pose().pose
-        self.armInterface.incHeight(-0.03,original_rpy, original_pose)
-        #self.armInterface.goDownInShelf(0,0,0,0,0,0)
-        rospy.loginfo("Wiggle!")
-        original_rpy = self.armInterface.move_group.get_current_rpy()
-        original_pose = self.armInterface.move_group.get_current_pose().pose
-        self.armInterface.wiggle(0.05,original_rpy, original_pose)
-        original_rpy = self.armInterface.move_group.get_current_rpy()
-        original_pose = self.armInterface.move_group.get_current_pose().pose
-        self.armInterface.wiggle(-0.10,original_rpy, original_pose)
-        original_rpy = self.armInterface.move_group.get_current_rpy()
-        original_pose = self.armInterface.move_group.get_current_pose().pose
-        self.armInterface.wiggle(0.05,original_rpy, original_pose)
-        original_rpy = self.armInterface.move_group.get_current_rpy()
-        original_pose = self.armInterface.move_group.get_current_pose().pose
-        self.armInterface.incHeight(0.06,original_rpy, original_pose)
-        #self.armInterface.goUpInShelf(0,0,0,0,0,0)
-        #original_rpy = self.armInterface.move_group.get_current_rpy()
-        #original_pose = self.armInterface.move_group.get_current_pose().pose
-        #self.armInterface.incHeight(0.12, original_rpy, original_pose)
-        #rospy.sleep(4)
-        original_rpy = self.armInterface.move_group.get_current_rpy()
-        original_pose = self.armInterface.move_group.get_current_pose().pose
-        self.armInterface.incDepth(0.25, original_rpy, original_pose)
-        rospy.sleep(4)
-        original_rpy = self.armInterface.move_group.get_current_rpy()
-        original_pose = self.armInterface.move_group.get_current_pose().pose
-        self.armInterface.incDepth(0.10, original_rpy, original_pose)
-        rospy.sleep(4)
-            # then move into shelf
-            # Then move down onto object
-        # self.EEInterface.toggle_vacuum(False)
-            #check item grasped via if(self.EEInterface.get_item_held_status())
-
-            #move arm to bin home position
+        # Check Vacuum is actually on
+        # The gotoObject() function has been replaced by several smaller functions that allow us a greater amount of control
+        if (self.EEInterface.get_vacuum_status()):
+            # Reaching into shelf
+            # The value handed to the armInterface should be calculated by the main controller depending on item pose
+            self.ArmInterface.goInsideShelf(-0.25)
+            # self.armInterface.incDepth(-0.25,original_rpy, original_pose)
+            #Finish reaching into shelf
+            rospy.loginfo("going down")
+            # Going to object
+            self.armInterface.goDownInShelf(-0.03)
+            # Check Item get_item_held_status
+            # If got item then no worrries
+            # else wiggle
+                if (self.EEInterface.get_item_held_status()):
+                    continue
+                else:
+                    rospy.loginfo("Wiggle!")
+                    # The main controller should double check that there is enough space to wiggle either side of the item.
+                    # Either by refusing to wiggle in one direction or by reducing the size of the wiggles
+                    # Go up before wiggle then back down afterwards? Easy to add but not here for now
+                    self.armInterface.newWiggle(0.05)
+                    # Check Item get_item_held_status
+                    if (self.EEInterface.get_item_held_status()):
+                        # We have the item, return to the middle with it
+                        self.armInterface.incHeight(0.06, self.armInterface.move_group.get_current_rpy(), self.armInterface.move_group.get_current_pose().pose)
+                        self.armInterface.newWiggle(-0.05)
+                        continue
+                    else:
+                        self.armInterface.newWiggle(-0.10)
+                        # Check Item get_item_held_status
+                        if (self.EEInterface.get_item_held_status()):
+                            # We have the item, return to the middle with it
+                            self.armInterface.incHeight(0.06, self.armInterface.move_group.get_current_rpy(), self.armInterface.move_group.get_current_pose().pose)
+                            self.armInterface.newWiggle(0.05)
+                            continue
+                        else:
+                            failure = True
+                            self.num_failures += 1
+                            self.EEInterface.toggle_vacuum(False)
+                            # Return to middle after failure
+                            self.armInterface.incHeight(0.06, self.armInterface.move_group.get_current_rpy(), self.armInterface.move_group.get_current_pose().pose)
+                            self.armInterface.newWiggle(0.05)
+        else:
+            self.EEInterface.toggle_vacuum(False)
+            # VACUUM FAILURE - STOP EXECUTION
+            # Any necessary movements - Going Home etc.
+            rospy.loginfo("VACUUM FAILURE - TERMINATING")
+            exit()
+            # self.EEInterface.toggle_vacuum(False)
+            # check item grasped via if(self.EEInterface.get_item_held_status())
 
         # TODO
 
         if failure:
             if self.num_failures is 1:
+                # Reset to shelf position
+                if self.itemNumber == 1:
+                    self.armInterface.gotoBin("A")
+                elif self.itemNumber == 2:
+                    self.armInterface.gotoBin("B")
+                elif self.itemNumber == 3:
+                    self.armInterface.gotoBin("C")
+                elif self.itemNumber == 4:
+                    self.armInterface.gotoBin("D")
+                elif self.itemNumber == 5:
+                    self.armInterface.gotoBin("E")
+                else:
+                    self.armInterface.gotoBin("F")
                 return 3
             elif self.num_failures is 2:
                 return 2
             else:
                 return 1
         else:
+            # Could move the moving out of shelf commands here
+            self.armInterface.goOutsideShelf(0.35)
             return 4
 
     def state_4_depositing(self):
@@ -232,28 +246,23 @@ class StateMachine():
         rospy.loginfo("State 4!")
         #Check item still ItemHeld
         # Commented out for now
-        # if self.EEInterface.get_item_held_status() == False:
-        #     self.EEInterface.toggle_vacuum(False)
-        #     # record item dropped
-        #     return 1
+        if self.EEInterface.get_item_held_status() == False:
+            self.EEInterface.toggle_vacuum(False)
+            # record item dropped
+            return 1
 
         #move arm to box
         self.armInterface.gotoBox()
-
-        #time.sleep(5)
-
         # Commented out for now
-        # if self.EEInterface.get_item_held_status() == False:
-        #     # record item dropped
-        #     self.EEInterface.toggle_vacuum(False)
-        #     return 1
+        if self.EEInterface.get_item_held_status() == False:
+            # record item dropped
+            self.EEInterface.toggle_vacuum(False)
+            return 1
 
         self.EEInterface.toggle_vacuum(False)
-
         rospy.sleep(8)
 
         # record item drop success
-
         # move to home position
         self.armInterface.goHomeFromBox()
 

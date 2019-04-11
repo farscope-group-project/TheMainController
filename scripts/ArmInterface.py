@@ -260,66 +260,61 @@ class ArmInterface():
         self.move_group.stop()
         self.move_group.clear_pose_targets()
 
-    def gotoObject(self, x, y, z, alpha, beta, gamma):
-        # For now this will visit a hardcoded spot to pick up an item
-        traj = JointTrajectory()
-        traj.joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
-        now = rospy.get_rostime()
-        rospy.loginfo("Current time %i %i", now.secs, now.nsecs)
-        traj.header.stamp = now
-        ag = FollowJointTrajectoryActionGoal()
-        ag.goal.trajectory = traj
+    def newWiggle(self,x_change):
+        pos = Pose()
+        original_rpy = self.move_group.get_current_rpy()
+        original_pose = self.move_group.get_current_pose().pose
+        q = tf.transformations.quaternion_from_euler(original_rpy[0], original_rpy[1], original_rpy[2])
+        pos.position.x = original_pose.position.x + x_change
+        pos.position.y = original_pose.position.y
+        pos.position.z = original_pose.position.z
+        pos.orientation.x = q[0]
+        pos.orientation.y = q[1]
+        pos.orientation.z = q[2]
+        pos.orientation.w = q[3]
+        self.move_group.set_pose_target(pos)
+        plan = self.move_group.go(wait=True)
+        self.move_group.stop()
+        self.move_group.clear_pose_targets()
 
+    # This function is no longer used, it has been replaced via several smaller functions but remains for posterity
+    # def gotoObject(self, x, y, z, alpha, beta, gamma):
+    #     # This function needs to be broken up
+    #     # We can split it neatly into a goInsideShelf function
+    #     # and a goDownForObject function
+    #     traj = JointTrajectory()
+    #     traj.joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+    #     now = rospy.get_rostime()
+    #     rospy.loginfo("Current time %i %i", now.secs, now.nsecs)
+    #     traj.header.stamp = now
+    #     ag = FollowJointTrajectoryActionGoal()
+    #     ag.goal.trajectory = traj
+    #
+    #
+    #     inside = JointTrajectoryPoint()
+    #     inside.positions = [math.radians(56.51), math.radians(-85.19), math.radians(95.29), math.radians(-100.09), math.radians(270.91), math.radians(-38.14)]
+    #     inside.velocities = self.default_velocity
+    #     inside.time_from_start = rospy.Duration(10.0)
+    #     traj.points.append(inside)
+    #
+    #     self.joint_angle_pub.publish(ag)
+    #     rospy.sleep(10)
 
-        inside = JointTrajectoryPoint()
-        inside.positions = [math.radians(56.51), math.radians(-85.19), math.radians(95.29), math.radians(-100.09), math.radians(270.91), math.radians(-38.14)]
-        inside.velocities = self.default_velocity
-        inside.time_from_start = rospy.Duration(10.0)
-        traj.points.append(inside)
+    def goInsideShelf(self, value):
+        # value should be determined by the main controller
+        self.incDepth(-0.25, self.move_group.get_current_rpy(), self.move_group.get_current_pose().pose)
 
-        self.joint_angle_pub.publish(ag)
-        rospy.sleep(10)
+    def goOutsideShelf(self, value):
+        # value should be the negative value handed to goInsideShelf plus a bit more for clearance
+        self.incDepth(0.25, self.move_group.get_current_rpy(), self.move_group.get_current_pose().pose)
 
-    def goDownInShelf(self,x,y,z,alpha,beta,gamma):
-        traj = JointTrajectory()
-        traj.joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
-        now = rospy.get_rostime()
-        rospy.loginfo("Current time %i %i", now.secs, now.nsecs)
-        traj.header.stamp = now
-        ag = FollowJointTrajectoryActionGoal()
-        ag.goal.trajectory = traj
+    def goDownInShelf(self, value):
+        # Should onyl be handed negative values
+        self.incHeight(value, self.move_group.get_current_rpy(), self.move_group.get_current_pose().pose)
 
-        touching_item = JointTrajectoryPoint()
-        touching_item.positions = [math.radians(56.28), math.radians(-82.90), math.radians(99.17), math.radians(-107.89), math.radians(271.42), math.radians(-38.20)]
-        touching_item.velocities = self.default_velocity
-        touching_item.time_from_start = rospy.Duration(10.0)
-        traj.points.append(touching_item)
-        ag = FollowJointTrajectoryActionGoal()
-        ag.goal.trajectory = traj
-
-        self.joint_angle_pub.publish(ag)
-        rospy.sleep(10)
-
-    def goUpInShelf(self,x,y,z,alpha,beta,gamma):
-        traj = JointTrajectory()
-        traj.joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
-        now = rospy.get_rostime()
-        rospy.loginfo("Current time %i %i", now.secs, now.nsecs)
-        traj.header.stamp = now
-        ag = FollowJointTrajectoryActionGoal()
-        ag.goal.trajectory = traj
-
-        inside = JointTrajectoryPoint()
-        inside.positions = [math.radians(56.51), math.radians(-85.19), math.radians(95.29), math.radians(-100.09), math.radians(270.91), math.radians(-38.14)]
-        inside.velocities = self.default_velocity
-        inside.time_from_start = rospy.Duration(10.0)
-        traj.points.append(inside)
-
-        ag = FollowJointTrajectoryActionGoal()
-        ag.goal.trajectory = traj
-
-        self.joint_angle_pub.publish(ag)
-        rospy.sleep(10)
+    def goUpInShelf(self, value):
+        # should only be handed positive values
+        self.incHeight(value, self.move_group.get_current_rpy(), self.move_group.get_current_pose().pose)
 
     def gotoBox(self):
         # hardcoded for now
