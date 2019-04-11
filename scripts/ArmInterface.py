@@ -19,6 +19,11 @@ class ArmInterface():
 
     def __init__(self):
         self.home_position = [math.radians(90.00), math.radians(-135.68), math.radians(121.90), math.radians(-76.51), math.radians(268.67) ,math.radians(-2.00)]
+        self.shelfA_position = [math.radians(109.11), math.radians(-99.1), math.radians(88.53), math.radians(-78.66), math.radians(268.91) ,math.radians(17.61)]
+        self.shelfB_position = [math.radians(75.68), math.radians(-110.29), math.radians(98.15), math.radians(-77.93), math.radians(268.93) ,math.radians(-16.52)]
+        self.shelfC_position = [math.radians(46.43), math.radians(-106.56), math.radians(95.57), math.radians(-79.48), math.radians(268.97) ,math.radians(-45.44)]
+        self.shelfD_position = [math.radians(108.67), math.radians(-96.3), math.radians(119.77), math.radians(-112.7), math.radians(268.91) ,math.radians(17.01)]
+        self.shelfE_position = [math.radians(76.98), math.radians(-108.08), math.radians(128.4), math.radians(-110.15), math.radians(268.78) ,math.radians(-14.94)]
         self.shelfF_position = [math.radians(40.08), math.radians(-106.25), math.radians(126.28), math.radians(-109.63), math.radians(270.44) ,math.radians(-53.83)]
         self.default_velocity = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
@@ -47,9 +52,42 @@ class ArmInterface():
         bin = JointTrajectoryPoint()
         bin.velocities = self.default_velocity
         bin.time_from_start = rospy.Duration(5.0)
-        if(binName == "F"):
-            rospy.loginfo("Going to Shelf F!")
+        if (binName == "A"):
+            rospy.loginfo("Going to Shelf A!")
+            bin.positions = self.shelfA_position
+        elif(binName == "B"):
+            rospy.loginfo("Going to Shelf B")
+            bin.positions = self.shelfB_position
+        elif(binName == "C"):
+            rospy.loginfo("Going to Shelf C")
+            bin.positions = self.shelfC_position
+        elif(binName == "D"):
+            rospy.loginfo("Going to Shelf D")
+            bin.positions = self.shelfD_position
+        elif(binName == "E"):
+            rospy.loginfo("Going to Shelf E")
+            bin.positions = self.shelfE_position
+        elif(binName == "F"):
+            rospy.loginfo("Going to Shelf F")
             bin.positions = self.shelfF_position
+        elif(binName == "G"):
+            rospy.loginfo("Going to Shelf G")
+            bin.positions = self.shelfG_position
+        elif(binName == "H"):
+            rospy.loginfo("Going to Shelf H")
+            bin.positions = self.shelfH_position
+        elif(binName == "I"):
+            rospy.loginfo("Going to Shelf I")
+            bin.positions = self.shelfI_position
+        elif(binName == "J"):
+            rospy.loginfo("Going to Shelf J")
+            bin.positions = self.shelfJ_position
+        elif(binName == "K"):
+            rospy.loginfo("Going to Shelf K")
+            bin.positions = self.shelfK_position
+        elif(binName == "L"):
+            rospy.loginfo("Going to Shelf L")
+            bin.positions = self.shelfL_position
         else:
             bin.positions = self.home_position
 
@@ -125,6 +163,7 @@ class ArmInterface():
         elif(nextPos == 8):
             q = tf.transformations.quaternion_from_euler(original_rpy[0], original_rpy[1], original_rpy[2])
             pos.position = original_pose.position
+            #rospy.loginfo(pos.position)
         elif(nextPos == 9):
             q = tf.transformations.quaternion_from_euler(original_rpy[0], original_rpy[1], (original_rpy[2]-math.radians(10)))
             pos.position.x = original_pose.position.x - 0.06077686218
@@ -206,6 +245,21 @@ class ArmInterface():
         self.move_group.stop()
         self.move_group.clear_pose_targets()
 
+    def wiggle(self,x_change, original_rpy, original_pose):
+        pos = Pose()
+        q = tf.transformations.quaternion_from_euler(original_rpy[0], original_rpy[1], original_rpy[2])
+        pos.position.x = original_pose.position.x + x_change
+        pos.position.y = original_pose.position.y
+        pos.position.z = original_pose.position.z
+        pos.orientation.x = q[0]
+        pos.orientation.y = q[1]
+        pos.orientation.z = q[2]
+        pos.orientation.w = q[3]
+        self.move_group.set_pose_target(pos)
+        plan = self.move_group.go(wait=True)
+        self.move_group.stop()
+        self.move_group.clear_pose_targets()
+
     def gotoObject(self, x, y, z, alpha, beta, gamma):
         # For now this will visit a hardcoded spot to pick up an item
         traj = JointTrajectory()
@@ -213,22 +267,47 @@ class ArmInterface():
         now = rospy.get_rostime()
         rospy.loginfo("Current time %i %i", now.secs, now.nsecs)
         traj.header.stamp = now
+        ag = FollowJointTrajectoryActionGoal()
+        ag.goal.trajectory = traj
+
+
         inside = JointTrajectoryPoint()
         inside.positions = [math.radians(56.51), math.radians(-85.19), math.radians(95.29), math.radians(-100.09), math.radians(270.91), math.radians(-38.14)]
         inside.velocities = self.default_velocity
         inside.time_from_start = rospy.Duration(10.0)
         traj.points.append(inside)
 
+        self.joint_angle_pub.publish(ag)
+        rospy.sleep(10)
+
+    def goDownInShelf(self,x,y,z,alpha,beta,gamma):
+        traj = JointTrajectory()
+        traj.joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+        now = rospy.get_rostime()
+        rospy.loginfo("Current time %i %i", now.secs, now.nsecs)
+        traj.header.stamp = now
+        ag = FollowJointTrajectoryActionGoal()
+        ag.goal.trajectory = traj
+
         touching_item = JointTrajectoryPoint()
         touching_item.positions = [math.radians(56.28), math.radians(-82.90), math.radians(99.17), math.radians(-107.89), math.radians(271.42), math.radians(-38.20)]
         touching_item.velocities = self.default_velocity
-        touching_item.time_from_start = rospy.Duration(20.0)
+        touching_item.time_from_start = rospy.Duration(10.0)
         traj.points.append(touching_item)
         ag = FollowJointTrajectoryActionGoal()
         ag.goal.trajectory = traj
 
         self.joint_angle_pub.publish(ag)
-        rospy.sleep(20)
+        rospy.sleep(10)
+
+    def goUpInShelf(self,x,y,z,alpha,beta,gamma):
+        traj = JointTrajectory()
+        traj.joint_names = ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint', 'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
+        now = rospy.get_rostime()
+        rospy.loginfo("Current time %i %i", now.secs, now.nsecs)
+        traj.header.stamp = now
+        ag = FollowJointTrajectoryActionGoal()
+        ag.goal.trajectory = traj
 
         inside = JointTrajectoryPoint()
         inside.positions = [math.radians(56.51), math.radians(-85.19), math.radians(95.29), math.radians(-100.09), math.radians(270.91), math.radians(-38.14)]

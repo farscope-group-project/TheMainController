@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
     This Ros Node is the main controller of the UR10 Amazon Picking Challenge Stack
-    It acts as both a publusher and subscriber to the various interfaces of the system
+    It acts as both a publisher and subscriber to the various interfaces of the system
 
 
 """
@@ -29,6 +29,9 @@ class StateMachine():
         # Initialise class variables
         self.node_name = "state_machine"
         self.state = 1
+        self.itemNumber = 1
+        rospy.loginfo("itemnumber:")
+        rospy.loginfo(self.itemNumber)
         self.state_mapper = {
             1: self.state_1_object_selection,
             2: self.state_2_vision_sweep,
@@ -76,7 +79,7 @@ class StateMachine():
             new_state = state_function_to_exec() # Function returns next state
             self.state = new_state
 
-            if self.state == 5:
+            if self.state == 6:
                 rospy.loginfo("State 5!")
                 print("Process Complete")
                 break
@@ -107,16 +110,33 @@ class StateMachine():
         # TODO
 
         #move to bin home position
-        self.armInterface.gotoBin("F")
+        if self.itemNumber == 1:
+            self.armInterface.gotoBin("A")
+        elif self.itemNumber ==2:
+            self.armInterface.gotoBin("B")
+        elif self.itemNumber ==3:
+            self.armInterface.gotoBin("C")
+        elif self.itemNumber ==4:
+            self.armInterface.gotoBin("D")
+        elif self.itemNumber ==5:
+            self.armInterface.gotoBin("E")
+        else:
+            self.armInterface.gotoBin("F")
+
         #do sweep
         original_rpy = self.armInterface.move_group.get_current_rpy()
         original_pose = self.armInterface.move_group.get_current_pose().pose
+        #rospy.loginfo("rpy:")
+        #rospy.loginfo(original_rpy)
+        #'rospy.loginfo("pose")
+        #'ospy.loginfo(original_pose)
         # Leave these alone once taken
         # Now create a loop to send signal to arm for position in sweep
         # After each position send correspondign signal to Vision System
         i = 0
         for i in range(0,16):
             self.armInterface.doVisionSweep(original_rpy, original_pose, (i+1))
+            #rospy.sleep(5)
 
 
 
@@ -138,38 +158,59 @@ class StateMachine():
         original_rpy = self.armInterface.move_group.get_current_rpy()
         original_pose = self.armInterface.move_group.get_current_pose().pose
         self.armInterface.incHeight(0.12, original_rpy, original_pose)
-        
-        self.armInterface.gotoObject(0,0,0,0,0,0) #(x,y,z,aplha,belta,gamma) # This might have to hand over a quaternion instead of RP
 
         self.EEInterface.toggle_vacuum(True)
-        #if (self.EEInterface.get_vacuum_status()):
-            
-            #move arm to object
-        
-            #check item grasped via self.EEInterface.get_item_held_status()  
-            # if self.EEInterface.get_item_held_status() == False:
-            # rospy.loginfo("Wait I am not holding any item!")
-            
-            # move the arm a bit on the left/right
-            
-            # if self.EEInterface.get_item_held_status() == False:
-            # rospy.loginfo("Nop, definitely no item held!")
-            # failure = True
-            # self.num_failures += 1
-            
-            # move arm back to shelf position 
+        rospy.sleep(4)
 
-            # else:    
-            self.armInterface.incHeight(0.12, original_rpy, original_pose)
-            rospy.sleep(4)
-            original_rpy = self.armInterface.move_group.get_current_rpy()
-            original_pose = self.armInterface.move_group.get_current_pose().pose
-            self.armInterface.incDepth(0.05064, original_rpy, original_pose)
-            rospy.sleep(4)
+
+        #if (self.EEInterface.get_vacuum_status()):
+            #move arm to object
+
+
+        #self.armInterface.gotoObject(0,0,0,0,0,0) #(x,y,z,aplha,belta,gamma) # This might have to hand over a quaternion instead of RPY
+        original_rpy = self.armInterface.move_group.get_current_rpy()
+        original_pose = self.armInterface.move_group.get_current_pose().pose
+        self.armInterface.incDepth(-0.25,original_rpy, original_pose)
+        rospy.loginfo("going down")
+        original_rpy = self.armInterface.move_group.get_current_rpy()
+        original_pose = self.armInterface.move_group.get_current_pose().pose
+        self.armInterface.incHeight(-0.03,original_rpy, original_pose)
+        #self.armInterface.goDownInShelf(0,0,0,0,0,0)
+        rospy.loginfo("Wiggle!")
+        original_rpy = self.armInterface.move_group.get_current_rpy()
+        original_pose = self.armInterface.move_group.get_current_pose().pose
+        self.armInterface.wiggle(0.05,original_rpy, original_pose)
+        original_rpy = self.armInterface.move_group.get_current_rpy()
+        original_pose = self.armInterface.move_group.get_current_pose().pose
+        self.armInterface.wiggle(-0.10,original_rpy, original_pose)
+        original_rpy = self.armInterface.move_group.get_current_rpy()
+        original_pose = self.armInterface.move_group.get_current_pose().pose
+        self.armInterface.wiggle(0.05,original_rpy, original_pose)
+        original_rpy = self.armInterface.move_group.get_current_rpy()
+        original_pose = self.armInterface.move_group.get_current_pose().pose
+        self.armInterface.incHeight(0.06,original_rpy, original_pose)
+        #self.armInterface.goUpInShelf(0,0,0,0,0,0)
+        #original_rpy = self.armInterface.move_group.get_current_rpy()
+        #original_pose = self.armInterface.move_group.get_current_pose().pose
+        #self.armInterface.incHeight(0.12, original_rpy, original_pose)
+        #rospy.sleep(4)
+        original_rpy = self.armInterface.move_group.get_current_rpy()
+        original_pose = self.armInterface.move_group.get_current_pose().pose
+        self.armInterface.incDepth(0.25, original_rpy, original_pose)
+        rospy.sleep(4)
+        original_rpy = self.armInterface.move_group.get_current_rpy()
+        original_pose = self.armInterface.move_group.get_current_pose().pose
+        self.armInterface.incDepth(0.10, original_rpy, original_pose)
+        rospy.sleep(4)
+            # then move into shelf
+            # Then move down onto object
+        # self.EEInterface.toggle_vacuum(False)
+            #check item grasped via if(self.EEInterface.get_item_held_status())
+
+            #move arm to bin home position
 
         # TODO
 
-        # change the logic to go back to vision sweep if failure is 1
         if failure:
             if self.num_failures is 1:
                 return 3
@@ -186,22 +227,16 @@ class StateMachine():
 
             @return the next state. This may be 1 on sucess, and also 1 on failure
         """
-        
+
         # TODO
         rospy.loginfo("State 4!")
-        # Check item still ItemHeld
+        #Check item still ItemHeld
         # Commented out for now
         # if self.EEInterface.get_item_held_status() == False:
         #     self.EEInterface.toggle_vacuum(False)
         #     # record item dropped
         #     return 1
 
-        # move arm to home 
-        # if self.EEInterface.get_item_held_status() == False:
-        #     self.EEInterface.toggle_vacuum(False)
-        #     # record item dropped
-        #     return 1
-        
         #move arm to box
         self.armInterface.gotoBox()
 
@@ -227,8 +262,12 @@ class StateMachine():
     def state_5_completion(self):
         #""" Tasks to do upon completion, writes pickup output to file """
         # TODO
-
-        pass
+        self.itemNumber += 1
+        rospy.loginfo(self.itemNumber)
+        if self.itemNumber <= 6:
+            return 1
+        else:
+            return 6
 
     def vision_callback(self):
         """ Callback for the vision messages """
